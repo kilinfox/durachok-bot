@@ -1,7 +1,47 @@
+from telebot import types
+from player import Player
+from inf import Information
+from game import Game
+
+class Trans:
+    #два класса в одном - поменять
+    def __init__(self, bot):
+        self.bot = bot
+
+    def request(self, text, player):
+        #возвращает выбранную пользователем карту
+        #pl - объект класса Player
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        if player.pl_hand.hand:
+            buttons = [types.InlineKeyboardButton(Secul.str_to_unicode(str(x)), callback_data= x.name + ' ' + str(x.cost)) for x in player.pl_hand.hand]
+            empty = types.InlineKeyboardButton('Ничего', callback_data="empty")
+            for but in buttons:
+                markup.add(but)
+            markup.add(empty)
+            self.bot.send_message(player.pl_id, text, reply_markup=markup)
+
+    def answer(self, player):
+        while True:
+                try:
+                    data = answer_var
+                    if data == '':
+                        raise ValueError
+                    if data != '':
+                        print(data)
+                    if data == "empty":
+                        return ""
+                    if data != 'empty' and data != '':
+                        return Secul.str_to_card_trn([data[0:-1], data[-1]])
+                except:
+                    continue
+                finally:
+                    answer_var = ''
+
+    def show(self, text, player):
+        self.bot.send_message(player.pl_id, text)
+
 import telebot
 from telebot import types
-import json
-from main_logic import *
 
 bot = telebot.TeleBot('5680182660:AAF2rVr0r3CFlC7O9xKDvEwBVyPscMHMUXk')
 inf = Information()
@@ -10,19 +50,31 @@ inf = Information()
 def start(message):
     if message.from_user.username:
         inf.put(message.from_user.username, message.chat.id)
+        bot.send_message(message.chat.id, 'Ваш username в телеграме - ваш ник в этой игре.\n' + message.from_user.username)
         bot.send_message(message.chat.id, 'Начать новую игру: /start_game')
     else:
-        bot.send_message(message.chat.id, 'У вас нет username, пока что он необходим для успешной игры"(, в скором времени это изменится. ')
+        if not inf.show(message.chat.id):
+            name = bot.send_message(message.chat.id, 'Придумайте имя:')
+            bot.register_next_step_handler(name, new_name)
+
+def new_name(message):
+    if not inf.show(message.text):
+        inf.put(message.text, message.chat.id)
+        bot.send_message(message.chat.id, 'Начать новую игру: /start_game')
+    else:
+        name = bot.send_message(message.chat.id, 'Это имя занято. Придумайте другое имя:')
+        bot.register_next_step_handler(name, new_name)
+
 
 @bot.callback_query_handler(func=lambda call: True)
 def call_back_but(call):
     if call.message:
-        with open('ans.json', 'w') as f:
-            if call.data != "empty":
-                name, cost = call.data.split(' ')
-                json.dump([name, int(cost)], f)
-            else:
-                json.dump("empty", f)
+        global answer_var
+        if call.data != "empty":
+            name, cost = call.data.split(' ')
+            answer_var = [name, int(cost)]
+        else:
+            answer_var = "empty"
 
 
 
